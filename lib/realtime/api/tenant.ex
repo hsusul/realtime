@@ -123,9 +123,13 @@ defmodule Realtime.Api.Tenant do
     end
   end
 
+  # GCM ciphertext differs on every write, so an unchanged secret is caught by comparing plaintexts
   def encrypt_jwt_secret(%Ecto.Changeset{valid?: true, changes: %{jwt_secret: plaintext}} = changeset)
-      when is_binary(plaintext),
-      do: put_change(changeset, :jwt_secret, Crypto.encrypt!(plaintext))
+      when is_binary(plaintext) do
+    if decrypt_jwt_secret(changeset.data.jwt_secret) == plaintext,
+      do: delete_change(changeset, :jwt_secret),
+      else: put_change(changeset, :jwt_secret, Crypto.encrypt!(plaintext))
+  end
 
   def encrypt_jwt_secret(changeset), do: changeset
 
